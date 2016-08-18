@@ -4,6 +4,8 @@
 
 #define SAFE_RELEASE(x) { if (x) x->Release(); x = NULL; }
 
+void sgInitialize();
+void sgCleanup();
 IBaseFilter* sgGetSampleGrabber();
 HRESULT sgAddSampleGrabber(IGraphBuilder *pGraph);
 HRESULT sgSetSampleGrabberMediaType();

@@ -15,11 +15,23 @@ unsigned int gWidth = 0;
 unsigned int gHeight = 0;
 unsigned int gChannels = 0;
 
+CRITICAL_SECTION mediaSampleLock;
+CComPtr<IMediaSample> lastMediaSample;
 
 int sgSetBitmapData(Gdiplus::Bitmap* pBitmap, const unsigned char* pData);
 void sgFlipUpDown(unsigned char* pData);
 void sgFreeMediaType(AM_MEDIA_TYPE& mt);
 
+
+void sgInitialize()
+{
+	InitializeCriticalSection(&mediaSampleLock);
+}
+
+void sgCleanup()
+{
+	DeleteCriticalSection(&mediaSampleLock);
+}
 
 IBaseFilter* sgGetSampleGrabber()
 {
@@ -204,22 +216,22 @@ unsigned char* sgGrabData()
 	if (pGrabber == 0)
 		return 0;
 
-        long Size = 0;
-        hr = pGrabber->GetCurrentBuffer(&Size, NULL);
-        if (FAILED(hr))
-                return 0;
-        else if (Size != pBufferSize) {
-                pBufferSize = Size;
-                if (pBuffer != 0)
-                        delete[] pBuffer;
-                pBuffer = new unsigned char[pBufferSize];
-        }
+	CComPtr<IMediaSample> currentSample;
+	{
+		EnterCriticalSection(&mediaSampleLock);
+		currentSample = lastMediaSample;
+		LeaveCriticalSection(&mediaSampleLock);
+	}
+	if (!currentSample)
+		return 0;
 
-        hr = pGrabber->GetCurrentBuffer(&pBufferSize, (long*)pBuffer);
-        if (FAILED(hr))
-                return 0;
-        else {
-                sgFlipUpDown(pBuffer);
+	long Size = currentSample->GetSize();
+	if (Size != pBufferSize) {
+		pBufferSize = Size;
+		if (pBuffer != 0)
+			delete[] pBuffer;
+		pBuffer = new unsigned char[pBufferSize];
+	}
 
 	{
 		BYTE* pSourceBuffer;

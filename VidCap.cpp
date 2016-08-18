@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "VidCap.h"
 #include "VidCapDlg.h"
+#include "samplegrab.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -21,8 +22,12 @@ END_MESSAGE_MAP()
 
 CVidCapApp::CVidCapApp()
 {
-        // TODO: add construction code here,
-        // Place all significant initialization in InitInstance
+	sgInitialize();
+}
+
+CVidCapApp::~CVidCapApp()
+{
+	sgCleanup();
 }
 
 

@@ -172,6 +172,48 @@ HRESULT vcCaptureVideo(HWND msgWindow, HWND prvWindow, unsigned int devIndex)
                 return hr;
         }
 
+	{
+		CComPtr<IPin> oPin;
+		hr = g_pCapture->FindPin(
+			pGrabber,
+			PINDIR_OUTPUT,
+			nullptr,
+			nullptr,
+			false,
+			0,
+			&oPin
+		);
+
+		if (FAILED(hr)) {
+			Msg(TEXT("Failed to find input pin to video renderer.  hr=0x%x"), hr);
+			return hr;
+		}
+
+		CComPtr<IPin> iPin;
+		oPin->ConnectedTo(&iPin);
+
+		// Ensure there are enough buffers for our hold
+		CComQIPtr<IMemInputPin> mipin = iPin;
+		CComPtr<IMemAllocator> alloc;
+		hr = mipin->GetAllocator(&alloc);
+		if (FAILED(hr)) {
+			Msg(TEXT("Failed to obtain allocator for renderer pin.  hr=0x%x"), hr);
+			return hr;
+		}
+
+		ALLOCATOR_PROPERTIES props;
+		alloc->GetProperties(&props);
+		if (props.cBuffers < 2)
+			props.cBuffers++;
+
+		ALLOCATOR_PROPERTIES actualProps;
+		hr = alloc->SetProperties(&props, &actualProps);
+		if (FAILED(hr)) {
+			Msg(TEXT("Could not override allocator properties.  hr=0x%x"), hr);
+			return hr;
+		}
+	}
+
 #ifdef REGISTER_FILTERGRAPH
         // Add our graph to the running object table, which will allow
         // the GraphEdit application to "spy" on our graph
