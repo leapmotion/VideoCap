@@ -140,13 +140,17 @@ HRESULT vcCaptureVideo(HWND msgWindow, HWND prvWindow, unsigned int devIndex)
                 Msg(TEXT("Couldn't set the SampleGrabber media type!  hr=0x%x"), hr);
                 return hr;
         }
+        hr = sgSetSampleGrabberCallbacks();
+        if (FAILED(hr)) {
+          Msg(TEXT("Couldn't set the SampleGrabber callback!  hr=0x%x"), hr);
+          return hr;
+        }
         IBaseFilter* pGrabber = sgGetSampleGrabber();
-
 
         // Render the preview pin on the video capture filter
         // Use this instead of g_pGraph->RenderFile
-        hr = g_pCapture->RenderStream(&PIN_CATEGORY_PREVIEW, &MEDIATYPE_Video,
-                                      pSrcFilter, pGrabber/*NULL*/, NULL);
+        hr = g_pCapture->RenderStream(&PIN_CATEGORY_PREVIEW, &MEDIATYPE_Video, pSrcFilter, pGrabber, NULL);
+
         if (FAILED(hr)) {
                 Msg(TEXT("Couldn't render the video capture stream.  hr=0x%x\r\n")
                     TEXT("The capture device may already be in use by another application.\r\n\r\n")

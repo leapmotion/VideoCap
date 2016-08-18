@@ -7,6 +7,7 @@
 IBaseFilter* sgGetSampleGrabber();
 HRESULT sgAddSampleGrabber(IGraphBuilder *pGraph);
 HRESULT sgSetSampleGrabberMediaType();
+HRESULT sgSetSampleGrabberCallbacks();
 HRESULT sgGetSampleGrabberMediaType();
 
 unsigned char* sgGrabData();            //call grab data first
