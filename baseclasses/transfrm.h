@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // File: Transfrm.h
 //
-// Desc: DirectShow base classes - defines classes from which simple 
+// Desc: DirectShow base classes - defines classes from which simple
 //       transform codecs may be derived.
 //
 // Copyright (c) 1992-2001 Microsoft Corporation.  All rights reserved.
@@ -18,6 +18,7 @@
 
 #ifndef __TRANSFRM__
 #define __TRANSFRM__
+#include "amfilter.h"
 
 // ======================================================================
 // This is the com object that represents a simple transform filter. It

@@ -104,6 +104,7 @@ inheritance and some via nested classes
 
 #ifndef __COMBASE__
 #define __COMBASE__
+#include "wxdebug.h"
 
 // Filter Setup data structures no defined in axextend.idl
 

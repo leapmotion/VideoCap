@@ -10,6 +10,11 @@
 
 #ifndef __FILTER__
 #define __FILTER__
+#include "combase.h"
+#include "mtype.h"
+#include "reftime.h"
+#include "wxlist.h"
+#include "wxutil.h"
 
 /* The following classes are declared in this header: */
 
