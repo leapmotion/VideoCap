@@ -56,8 +56,8 @@ Gdiplus::Bitmap *sgGetBitmap()
                 pCapturedBitmap = ::new Gdiplus::Bitmap(width, height, PixelFormat24bppRGB);
         }
 
-	auto lastSample = g_pFormatCorrector->GetLastOutputSample();
-	auto actualLen = lastSample->GetActualDataLength();
+	CComPtr<IMediaSample> lastSample = g_pFormatCorrector->GetLastOutputSample();
+	ULONG actualLen = lastSample->GetActualDataLength();
         if (actualLen != width * height * channels)
                 return 0;
 

@@ -10,12 +10,14 @@
 static const GUID IID_GrayscaleFormatCorrector = { 0x82cde25b, 0x4955, 0x459b,{ 0xa2, 0x9e, 0x2d, 0x36, 0x66, 0x67, 0xc5, 0xe1 } };
 
 FormatCorrector::FormatCorrector():
-	CTransformFilter("Leap Motion grayscale conversion filter", nullptr, IID_GrayscaleFormatCorrector)
+	CTransformFilter("Leap Motion grayscale conversion filter", NULL, IID_GrayscaleFormatCorrector)
 {
+	InitializeCriticalSection(&m_lock);
 }
 
 FormatCorrector::~FormatCorrector()
 {
+	DeleteCriticalSection(&m_lock);
 }
 
 HRESULT FormatCorrector::CheckInputType(const CMediaType *mtIn) {
@@ -72,7 +74,7 @@ HRESULT FormatCorrector::GetMediaType(int  iPosition, CMediaType *pMediaType) {
 	pMediaType->SetTemporalCompression(false);
 
 	VIDEOINFOHEADER* pVih = reinterpret_cast<VIDEOINFOHEADER*>(pMediaType->pbFormat);
-	auto& bmiHeader = pVih->bmiHeader;
+	BITMAPINFOHEADER& bmiHeader = pVih->bmiHeader;
 	bmiHeader.biWidth *= 2; // stereo image, twice the original nominal width
 	bmiHeader.biBitCount = 24;
 	bmiHeader.biCompression = BI_RGB;
@@ -104,9 +106,10 @@ HRESULT FormatCorrector::Transform(IMediaSample *pIn, IMediaSample *pOut) {
 	pOut->SetSyncPoint(true);
 
 	{
-		std::lock_guard<std::mutex> lk{ m_lock };
+		EnterCriticalSection(&m_lock);
 		m_lastInput = pIn;
 		m_lastOutput = pOut;
+		LeaveCriticalSection(&m_lock);
 	}
 
 	// No work to be done, we can short-circuit here

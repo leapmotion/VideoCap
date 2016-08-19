@@ -13,7 +13,7 @@ public:
 
 private:
 	// Holds a reference to the last input media sample
-	mutable std::mutex m_lock;
+	mutable CRITICAL_SECTION m_lock;
 	CComPtr<IMediaSample> m_lastInput;
 	CComPtr<IMediaSample> m_lastOutput;
 
@@ -28,13 +28,19 @@ public:
 	ULONG GetInputChannels(void) const { return channels; }
 
 	CComPtr<IMediaSample> GetLastInputSample(void) const {
-		std::lock_guard<std::mutex> lk(m_lock);
-		return m_lastInput;
+		CComPtr<IMediaSample> retVal;
+		EnterCriticalSection(&m_lock);
+		retVal = m_lastInput;
+		LeaveCriticalSection(&m_lock);
+		return retVal;
 	}
 
 	CComPtr<IMediaSample> GetLastOutputSample(void) const {
-		std::lock_guard<std::mutex> lk(m_lock);
-		return m_lastOutput;
+		CComPtr<IMediaSample> retVal;
+		EnterCriticalSection(&m_lock);
+		retVal = m_lastOutput;
+		LeaveCriticalSection(&m_lock);
+		return retVal;
 	}
 
 	HRESULT CheckInputType(const CMediaType *mtIn);
