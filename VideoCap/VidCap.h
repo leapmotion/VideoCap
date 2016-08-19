@@ -18,7 +18,6 @@ class CVidCapApp : public CWinApp
 {
 public:
 	CVidCapApp();
-	~CVidCapApp();
 
 // Overrides
 public:

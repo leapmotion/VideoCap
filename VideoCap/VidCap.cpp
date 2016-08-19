@@ -22,12 +22,6 @@ END_MESSAGE_MAP()
 
 CVidCapApp::CVidCapApp()
 {
-	sgInitialize();
-}
-
-CVidCapApp::~CVidCapApp()
-{
-	sgCleanup();
 }
 
 

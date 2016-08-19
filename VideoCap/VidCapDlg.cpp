@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "VidCap.h"
 #include "VidCapDlg.h"
+#include "FormatCorrector.h"
 
 #include "capture.h"
 #include "samplegrab.h"
@@ -21,7 +22,7 @@
 
 CVidCapDlg::CVidCapDlg(CWnd* pParent /*=NULL*/)
                 : CDialog(CVidCapDlg::IDD, pParent)
-                , m_nTimer(0), m_nTimerInterval(1000)                                
+                , m_nTimer(0), m_nTimerInterval(1000)
                 , m_TakeSnapshot(false)
                 , pBmpEncoder(GUID_NULL)
 {
@@ -37,7 +38,7 @@ void CVidCapDlg::DoDataExchange(CDataExchange* pDX)
         DDV_MinMaxUInt(pDX, m_nTimerInterval, 10, 10000);
         DDX_Control(pDX, IDC_RUN_BUTTON, m_RunButton);
         DDX_Control(pDX, IDC_CAPIMG_STATIC, m_CapImgStatic);
-        DDX_Control(pDX, IDC_VIDINFO_STATIC, m_VideoFormat);                        
+        DDX_Control(pDX, IDC_VIDINFO_STATIC, m_VideoFormat);
 }
 
 BEGIN_MESSAGE_MAP(CVidCapDlg, CDialog)
@@ -49,7 +50,7 @@ BEGIN_MESSAGE_MAP(CVidCapDlg, CDialog)
         ON_BN_CLICKED(IDC_RUN_BUTTON, &CVidCapDlg::OnBnClickedRunButton)
         ON_WM_TIMER()
         ON_WM_CLOSE()
-        ON_WM_WINDOWPOSCHANGED()        
+        ON_WM_WINDOWPOSCHANGED()
         ON_STN_DBLCLK(IDC_CAPIMG_STATIC, &CVidCapDlg::OnStnDblclickCapimgStatic)
 END_MESSAGE_MAP()
 
@@ -93,7 +94,7 @@ void CVidCapDlg::OnClose()
         // TODO: Add your message handler code here and/or call default
         KillTimer(m_nTimer);
         vcStopCaptureVideo();
-        CoUninitialize();        
+        CoUninitialize();
 
         CDialog::OnClose();
 }
@@ -180,13 +181,18 @@ void CVidCapDlg::OnBnClickedRunButton()
                         vcStopCaptureVideo();
                         return;
                 }
-                
+
                 CString str;
-                str.Format(L"Video output: %dx%d %dbpp", sgGetDataWidth(), sgGetDataHeight(), 8 * sgGetDataChannels()); 
+                str.Format(
+			L"Video output: %dx%d %dbpp",
+			g_pFormatCorrector->GetConnectedWidth(),
+			g_pFormatCorrector->GetConnectedHeight(),
+			8 * g_pFormatCorrector->GetInputChannels()
+		);
                 m_VideoFormat.SetWindowTextW(str);
 
                 //Setup Timer
-                m_nTimer = SetTimer(1, m_nTimerInterval, 0);                                        
+                m_nTimer = SetTimer(1, m_nTimerInterval, 0);
 
                 m_RunButton.SetWindowTextW(L"Stop");
         } else {
@@ -209,8 +215,8 @@ void CVidCapDlg::OnTimer(UINT_PTR nIDEvent)
         TRACE(L" %d:%d:%d\n", SystemTime.wHour, SystemTime.wMinute, SystemTime.wSecond);
 
         unsigned char* pData = sgGrabData();
-        if (pData != 0) 
-                DrawData(sgGetBitmap());        
+        if (pData != 0)
+                DrawData(sgGetBitmap());
 
         CDialog::OnTimer(nIDEvent);
 }
@@ -225,9 +231,9 @@ void CVidCapDlg::OnWindowPosChanged(WINDOWPOS* lpwndpos)
 }
 
 void CVidCapDlg::DrawData(Gdiplus::Bitmap *pBitmap)
-{                
+{
         if (pBitmap == 0)
-                return;        
+                return;
 
         if (m_TakeSnapshot == true) {
                 m_TakeSnapshot = false;
@@ -244,7 +250,7 @@ void CVidCapDlg::DrawData(Gdiplus::Bitmap *pBitmap)
                                 else
                                         fclose(fp);
 
-                        }                        
+                        }
                 }
         }
 
@@ -253,7 +259,7 @@ void CVidCapDlg::DrawData(Gdiplus::Bitmap *pBitmap)
         Gdiplus::Graphics g(m_CapImgStatic.GetDC()->m_hDC);
 
         g.DrawImage(pBitmap, Gdiplus::Rect(0, 0, r.right, r.bottom));
-        
+
         UpdateData(FALSE);
 }
 

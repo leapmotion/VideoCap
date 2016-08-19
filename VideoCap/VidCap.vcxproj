@@ -118,6 +118,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="capture.cpp" />
+    <ClCompile Include="FormatCorrector.cpp" />
     <ClCompile Include="samplegrab.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -128,6 +129,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="capture.h" />
+    <ClInclude Include="FormatCorrector.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="samplegrab.h" />
     <ClInclude Include="stdafx.h" />

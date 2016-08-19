@@ -2,8 +2,7 @@
 #include "stdafx.h"
 #include "capture.h"
 #include "samplegrab.h"
-
-
+#include "FormatCorrector.h"
 
 //
 // Global Data
@@ -39,7 +38,7 @@ void vcGetCaptureDevices(CComboBox& adaptersBox)
 {
         adaptersBox.ResetContent();
 
-// Create the System Device Enumerator.
+	// Create the System Device Enumerator.
         HRESULT hr;
         ICreateDevEnum *pSysDevEnum = NULL;
         hr = CoCreateInstance(CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC_SERVER,
@@ -49,7 +48,7 @@ void vcGetCaptureDevices(CComboBox& adaptersBox)
                 return;
         }
 
-// Obtain a class enumerator for the video compressor category.
+	// Obtain a class enumerator for the video compressor category.
         IEnumMoniker *pEnumCat = NULL;
         hr = pSysDevEnum->CreateClassEnumerator(CLSID_VideoInputDeviceCategory, &pEnumCat, 0);
 
@@ -94,7 +93,7 @@ HRESULT vcCaptureVideo(HWND msgWindow, HWND prvWindow, unsigned int devIndex)
                 devIndex = 1;
 
         HRESULT hr;
-        IBaseFilter *pSrcFilter = NULL;
+        CComPtr<IBaseFilter> pSrcFilter = NULL;
 
         // Get DirectShow interfaces
         hr = GetInterfaces(msgWindow);
@@ -126,44 +125,62 @@ HRESULT vcCaptureVideo(HWND msgWindow, HWND prvWindow, unsigned int devIndex)
                     TEXT("If you have a working video capture device, please make sure\r\n")
                     TEXT("that it is connected and is not being used by another application.\r\n\r\n")
                     TEXT("The sample will now close."), hr);
-                pSrcFilter->Release();
                 return hr;
         }
 
-        hr = sgAddSampleGrabber(g_pGraph);
+	CComPtr<FormatCorrector> pFormatCorrector;
+	hr = sgAddSampleGrabber(g_pGraph, pFormatCorrector);
         if (FAILED(hr)) {
                 Msg(TEXT("Couldn't add the SampleGrabber filter to the graph!  hr=0x%x"), hr);
                 return hr;
         }
-        hr = sgSetSampleGrabberMediaType();
-        if (FAILED(hr)) {
-                Msg(TEXT("Couldn't set the SampleGrabber media type!  hr=0x%x"), hr);
-                return hr;
-        }
-        hr = sgSetSampleGrabberCallbacks();
-        if (FAILED(hr)) {
-          Msg(TEXT("Couldn't set the SampleGrabber callback!  hr=0x%x"), hr);
-          return hr;
-        }
-        IBaseFilter* pGrabber = sgGetSampleGrabber();
+
+	// Connect the source to the corrector so we can get an RGB image as we expect
+	CComPtr<IBaseFilter> pFormatCorrectorBF = pFormatCorrector;
+	hr = g_pGraph->AddFilter(pFormatCorrectorBF, L"Format Corrector");
+	if (FAILED(hr)) {
+		Msg(TEXT("Could not add format corrector to the filter graph.  hr=0x%x"), hr);
+		return hr;
+	}
+
+	{
+		CComPtr<IEnumPins> pEnum;
+		pSrcFilter->EnumPins(&pEnum);
+		CComPtr<IPin> matchingPin;
+
+		ULONG count;
+		for (CComPtr<IPin> curPin; SUCCEEDED(pEnum->Next(1, &curPin, &count)) && count; ) {
+			PIN_DIRECTION pinDir;
+			curPin->QueryDirection(&pinDir);
+			if (pinDir == PINDIR_OUTPUT) {
+				matchingPin = curPin;
+				break;
+			}
+		}
+		if(!matchingPin) {
+			Msg(TEXT("Could not find an output pin on the source filter.  hr=0x%x"), hr);
+			return hr;
+		}
+
+		hr = g_pGraph->Connect(
+			matchingPin,
+			pFormatCorrector->GetPin(0)
+		);
+		if (FAILED(hr)) {
+			Msg(TEXT("Could not connect source filter to the format corrector.  hr=0x%x"), hr);
+			return hr;
+		}
+	}
 
         // Render the preview pin on the video capture filter
-        // Use this instead of g_pGraph->RenderFile
-        hr = g_pCapture->RenderStream(&PIN_CATEGORY_PREVIEW, &MEDIATYPE_Video, pSrcFilter, pGrabber, NULL);
+	hr = g_pCapture->RenderStream(NULL, &MEDIATYPE_Video, pFormatCorrectorBF, NULL, NULL);
 
         if (FAILED(hr)) {
                 Msg(TEXT("Couldn't render the video capture stream.  hr=0x%x\r\n")
                     TEXT("The capture device may already be in use by another application.\r\n\r\n")
                     TEXT("The sample will now close."), hr);
-                pSrcFilter->Release();
                 return hr;
         }
-
-        hr = sgGetSampleGrabberMediaType();
-
-        // Now that the filter has been added to the graph and we have
-        // rendered its stream, we can release this reference to the filter.
-        pSrcFilter->Release();
 
         // Set video window style and position
         hr = SetupVideoWindow(prvWindow);
@@ -171,48 +188,6 @@ HRESULT vcCaptureVideo(HWND msgWindow, HWND prvWindow, unsigned int devIndex)
                 Msg(TEXT("Couldn't initialize video window!  hr=0x%x"), hr);
                 return hr;
         }
-
-	{
-		CComPtr<IPin> oPin;
-		hr = g_pCapture->FindPin(
-			pGrabber,
-			PINDIR_OUTPUT,
-			nullptr,
-			nullptr,
-			false,
-			0,
-			&oPin
-		);
-
-		if (FAILED(hr)) {
-			Msg(TEXT("Failed to find input pin to video renderer.  hr=0x%x"), hr);
-			return hr;
-		}
-
-		CComPtr<IPin> iPin;
-		oPin->ConnectedTo(&iPin);
-
-		// Ensure there are enough buffers for our hold
-		CComQIPtr<IMemInputPin> mipin = iPin;
-		CComPtr<IMemAllocator> alloc;
-		hr = mipin->GetAllocator(&alloc);
-		if (FAILED(hr)) {
-			Msg(TEXT("Failed to obtain allocator for renderer pin.  hr=0x%x"), hr);
-			return hr;
-		}
-
-		ALLOCATOR_PROPERTIES props;
-		alloc->GetProperties(&props);
-		if (props.cBuffers < 2)
-			props.cBuffers++;
-
-		ALLOCATOR_PROPERTIES actualProps;
-		hr = alloc->SetProperties(&props, &actualProps);
-		if (FAILED(hr)) {
-			Msg(TEXT("Could not override allocator properties.  hr=0x%x"), hr);
-			return hr;
-		}
-	}
 
 #ifdef REGISTER_FILTERGRAPH
         // Add our graph to the running object table, which will allow
