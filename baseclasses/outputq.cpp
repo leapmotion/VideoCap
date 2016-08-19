@@ -181,14 +181,14 @@ COutputQueue::~COutputQueue()
 DWORD WINAPI COutputQueue::InitialThreadProc(__in LPVOID pv)
 {
     HRESULT hrCoInit = CAMThread::CoInitializeHelper();
-    
+
     COutputQueue *pSampleQueue = (COutputQueue *)pv;
     DWORD dwReturn = pSampleQueue->ThreadProc();
 
     if(hrCoInit == S_OK) {
         CoUninitialize();
     }
-    
+
     return dwReturn;
 }
 
@@ -205,7 +205,7 @@ DWORD COutputQueue::ThreadProc()
         BOOL          bWait = FALSE;
         IMediaSample *pSample;
         LONG          lNumberToSend; // Local copy
-        NewSegmentPacket* ppacket;
+        NewSegmentPacket* ppacket = NULL;
 
         //
         //  Get a batch of samples and send it if possible
@@ -362,7 +362,7 @@ DWORD COutputQueue::ThreadProc()
             SetEvent(m_evFlushComplete);
         }
 
-        if (pSample == NEW_SEGMENT) {
+	if (ppacket && pSample == NEW_SEGMENT) {
             m_pPin->NewSegment(ppacket->tStart, ppacket->tStop, ppacket->dRate);
             delete ppacket;
         }
@@ -598,7 +598,7 @@ HRESULT COutputQueue::ReceiveMultiple (
     if (nSamples < 0) {
         return E_INVALIDARG;
     }
-    
+
     CAutoLock lck(this);
     //  Either call directly or queue up the samples
 
