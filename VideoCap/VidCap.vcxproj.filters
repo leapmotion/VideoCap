@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
     <Filter Include="Capture">
-      <UniqueIdentifier>{88d485d3-5535-459d-9c7a-6f375caa4e6c}</UniqueIdentifier>
+      <UniqueIdentifier>{8587d5a9-755c-4ec6-9248-0f82f01199a6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -52,9 +52,6 @@
     </ClInclude>
     <ClInclude Include="samplegrab.h">
       <Filter>Capture</Filter>
-    </ClInclude>
-    <ClInclude Include="qedit.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
