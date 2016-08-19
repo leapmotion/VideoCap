@@ -143,37 +143,8 @@ HRESULT vcCaptureVideo(HWND msgWindow, HWND prvWindow, unsigned int devIndex)
 		return hr;
 	}
 
-	{
-		CComPtr<IEnumPins> pEnum;
-		pSrcFilter->EnumPins(&pEnum);
-		CComPtr<IPin> matchingPin;
-
-		ULONG count;
-		for (CComPtr<IPin> curPin; SUCCEEDED(pEnum->Next(1, &curPin, &count)) && count; ) {
-			PIN_DIRECTION pinDir;
-			curPin->QueryDirection(&pinDir);
-			if (pinDir == PINDIR_OUTPUT) {
-				matchingPin = curPin;
-				break;
-			}
-		}
-		if(!matchingPin) {
-			Msg(TEXT("Could not find an output pin on the source filter.  hr=0x%x"), hr);
-			return hr;
-		}
-
-		hr = g_pGraph->Connect(
-			matchingPin,
-			pFormatCorrector->GetPin(0)
-		);
-		if (FAILED(hr)) {
-			Msg(TEXT("Could not connect source filter to the format corrector.  hr=0x%x"), hr);
-			return hr;
-		}
-	}
-
         // Render the preview pin on the video capture filter
-	hr = g_pCapture->RenderStream(NULL, &MEDIATYPE_Video, pFormatCorrectorBF, NULL, NULL);
+	hr = g_pCapture->RenderStream(NULL, &MEDIATYPE_Video, pSrcFilter, pFormatCorrectorBF, NULL);
 
         if (FAILED(hr)) {
                 Msg(TEXT("Couldn't render the video capture stream.  hr=0x%x\r\n")

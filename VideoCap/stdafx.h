@@ -39,17 +39,6 @@
 #include <afxext.h>         // MFC extensions
 
 
-
-
-/*template<typename T> void swap(T& x, T& y)
-{
-        T tmp = x;
-        x = y;
-        y = tmp;
-}*/
-
-
-
 #ifndef _AFX_NO_OLE_SUPPORT
 #include <afxdtctl.h>		// MFC support for Internet Explorer 4 Common Controls
 #endif

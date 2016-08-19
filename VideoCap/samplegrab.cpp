@@ -12,7 +12,6 @@ std::vector<unsigned char> buffer;
 Gdiplus::Bitmap *pCapturedBitmap = 0;
 
 int sgSetBitmapData(Gdiplus::Bitmap* pBitmap, const unsigned char* pData);
-void sgFlipUpDown(unsigned char* pData);
 void sgFreeMediaType(AM_MEDIA_TYPE& mt);
 
 void sgCloseSampleGrabber()
@@ -57,10 +56,17 @@ Gdiplus::Bitmap *sgGetBitmap()
                 pCapturedBitmap = ::new Gdiplus::Bitmap(width, height, PixelFormat24bppRGB);
         }
 
-        if (buffer.size() != width * height * channels)
+	auto lastSample = g_pFormatCorrector->GetLastOutputSample();
+	auto actualLen = lastSample->GetActualDataLength();
+        if (actualLen != width * height * channels)
                 return 0;
 
-        if (sgSetBitmapData(pCapturedBitmap, buffer.data()) == 0)
+	BYTE* pBuf;
+	HRESULT hr = lastSample->GetPointer(&pBuf);
+	if (FAILED(hr))
+		return 0;
+
+        if (sgSetBitmapData(pCapturedBitmap, pBuf) == 0)
                 return pCapturedBitmap;
         else
                 return 0;
@@ -73,7 +79,7 @@ unsigned char* sgGrabData()
 	if (g_pFormatCorrector == 0)
 		return 0;
 
-	CComPtr<IMediaSample> currentSample = g_pFormatCorrector->GetLastSample();
+	CComPtr<IMediaSample> currentSample = g_pFormatCorrector->GetLastInputSample();
 	if (!currentSample)
 		return 0;
 
@@ -87,7 +93,6 @@ unsigned char* sgGrabData()
 			return 0;
 		memcpy(buffer.data(), pSourceBuffer, Size);
 	}
-	sgFlipUpDown(buffer.data());
 
 	::CreateDirectory(L"C:\\pMonitor", NULL);
 	CString StrText = _T("");

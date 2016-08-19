@@ -11,9 +11,6 @@ public:
 	FormatCorrector(void);
 	~FormatCorrector(void);
 
-	// Holds true if a grayscale conversion is necesary.  Otherwise this filter does no work.
-	bool grayscale_conversion = false;
-
 private:
 	// Holds a reference to the last input media sample
 	mutable std::mutex m_lock;
@@ -30,9 +27,14 @@ public:
 	ULONG GetConnectedHeight(void) const { return height; }
 	ULONG GetInputChannels(void) const { return channels; }
 
-	CComPtr<IMediaSample> GetLastSample(void) const {
+	CComPtr<IMediaSample> GetLastInputSample(void) const {
 		std::lock_guard<std::mutex> lk(m_lock);
 		return m_lastInput;
+	}
+
+	CComPtr<IMediaSample> GetLastOutputSample(void) const {
+		std::lock_guard<std::mutex> lk(m_lock);
+		return m_lastOutput;
 	}
 
 	HRESULT CheckInputType(const CMediaType *mtIn);

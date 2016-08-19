@@ -1,6 +1,10 @@
 #include "stdafx.h"
 #include "FormatCorrector.h"
 #include "../baseclasses/fourcc.h"
+#include <algorithm>
+
+#undef min
+#undef max
 
 // {82CDE25B-4955-459B-A29E-2D366667C5E1}
 static const GUID IID_GrayscaleFormatCorrector = { 0x82cde25b, 0x4955, 0x459b,{ 0xa2, 0x9e, 0x2d, 0x36, 0x66, 0x67, 0xc5, 0xe1 } };
@@ -35,11 +39,11 @@ HRESULT FormatCorrector::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPE
 
 	// For a stereo image, the output width is twice the input width
 	BITMAPINFOHEADER* pbmi = HEADER(mediaType.pbFormat);
-	width = pbmi->biWidth;
+	width = pbmi->biWidth * 2;
 	height = pbmi->biHeight;
 	channels = pbmi->biBitCount / 8;
 
-	ppropInputRequest->cbBuffer = DIBSIZE(*pbmi);
+	ppropInputRequest->cbBuffer = width * height * 3;
 	FreeMediaType(mediaType);
 
 	ALLOCATOR_PROPERTIES actual;
@@ -66,33 +70,45 @@ HRESULT FormatCorrector::GetMediaType(int  iPosition, CMediaType *pMediaType) {
 
 	pMediaType->subtype = MEDIASUBTYPE_RGB24;
 	pMediaType->SetTemporalCompression(false);
+
+	VIDEOINFOHEADER* pVih = reinterpret_cast<VIDEOINFOHEADER*>(pMediaType->pbFormat);
+	auto& bmiHeader = pVih->bmiHeader;
+	bmiHeader.biWidth *= 2; // stereo image, twice the original nominal width
+	bmiHeader.biBitCount = 24;
+	bmiHeader.biCompression = BI_RGB;
+	bmiHeader.biSizeImage = width * height * 3;
 	return S_OK;
 }
 
 HRESULT FormatCorrector::Transform(IMediaSample *pIn, IMediaSample *pOut) {
+	// Expanding copy from the input to the output buffers
+	BYTE* pOutBuf;
+	BYTE* pInBuf;
+
+	pIn->GetPointer(&pInBuf);
+	pOut->GetPointer(&pOutBuf);
+
+	long inSize = pIn->GetSize();
+	long outSize = pOut->GetSize();
+
+	if (outSize < inSize * 3)
+		return E_FAIL;
+
+	for (long i = 0; i < inSize; i++) {
+		pOutBuf[i * 3 + 0] = pInBuf[i];
+		pOutBuf[i * 3 + 1] = pInBuf[i];
+		pOutBuf[i * 3 + 2] = pInBuf[i];
+	}
+
+	pOut->SetActualDataLength(inSize * 3);
+	pOut->SetSyncPoint(true);
+
 	{
 		std::lock_guard<std::mutex> lk{ m_lock };
 		m_lastInput = pIn;
 		m_lastOutput = pOut;
 	}
 
-	if(!grayscale_conversion) {
-		// Trivial copy from the input to the output buffers
-		BYTE* pOutBuf;
-		BYTE* pInBuf;
-
-		pIn->GetPointer(&pInBuf);
-		pOut->GetPointer(&pOutBuf);
-
-		long size = pOut->GetSize();
-		memcpy(pOutBuf, pInBuf, size);
-		pOut->SetActualDataLength(size);
-		pOut->SetSyncPoint(true);
-
-		// No work to be done, we can short-circuit here
-		return S_OK;
-	}
-
-	;
+	// No work to be done, we can short-circuit here
 	return S_OK;
 }
